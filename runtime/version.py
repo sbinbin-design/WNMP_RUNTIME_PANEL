@@ -18,7 +18,7 @@ import os
 
 # ---- 默认兜底值 ----
 PANEL_NAME = "WNMP Runtime Panel"
-PANEL_VERSION = "0.2.0-dev"
+PANEL_VERSION = "0.2.1-dev"
 BUILD_DATE = ""  # 构建时可由脚本注入，留空表示开发构建
 
 

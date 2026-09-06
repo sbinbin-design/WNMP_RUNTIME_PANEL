@@ -1,14 +1,16 @@
 # Nginx 站点配置模板
 # 首次初始化或 reset-config 时由模板生成；生成后的 config 文件由用户维护，启动/重启不会自动覆盖。
 # 当 ENABLE_HTTPS=1 时生成 HTTPS server 块，ENABLE_HTTPS=0 时不生成
+# 所有文件系统路径占位符已由 generate_site_config 通过 format_nginx_path 统一加双引号包裹，
+# 兼容 WNMP 安装到含空格目录（如 D:/Program Files/WNMP）。
 
 # HTTP server 块（始终生成）
 server {
     listen       {{HTTP_PORT}};
     server_name  localhost;
 
-    # 站点根目录（Windows 路径已转换为正斜杠）
-    root {{WEB_ROOT_POSIX}};
+    # 站点根目录（由 format_nginx_path 统一格式化：转正斜杠 + 双引号包裹）
+    root {{WEB_ROOT}};
     index  index.html index.htm index.php;
 
     location / {
@@ -29,7 +31,7 @@ server {
     }
 
     # 引入用户自定义配置（server 级别）
-    include {{NGINX_CUSTOM_SERVER_DIR}}/*.conf;
+    include {{NGINX_CUSTOM_SERVER_GLOB}};
 }
 
 # HTTPS server 块（仅当 ENABLE_HTTPS=1 时生成）
@@ -47,8 +49,8 @@ server {
     ssl_ciphers  HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers  on;
 
-    # 站点根目录（Windows 路径已转换为正斜杠）
-    root {{WEB_ROOT_POSIX}};
+    # 站点根目录（由 format_nginx_path 统一格式化：转正斜杠 + 双引号包裹）
+    root {{WEB_ROOT}};
     index  index.html index.htm index.php;
 
     location / {
@@ -69,6 +71,6 @@ server {
     }
 
     # 引入用户自定义配置（server 级别）
-    include {{NGINX_CUSTOM_SERVER_DIR}}/*.conf;
+    include {{NGINX_CUSTOM_SERVER_GLOB}};
 }
 #HTTPS_SERVER_END#

@@ -3,7 +3,7 @@
   <assemblyIdentity
     type="win32"
     name="WNMP.WNMPPanel"
-    version="0.2.0.0"
+    version="0.2.1.0"
     processorArchitecture="*"/>
   <description>WNMP Runtime Panel Launcher</description>
   <!-- highestAvailable: 管理员用户双击时触发 UAC 提权，普通用户以正常权限运行 -->

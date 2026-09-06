@@ -335,8 +335,12 @@ def generate_nginx_config(root_dir, cfg, logger=None):
     """Generate bin/nginx/conf/nginx.conf from template, include custom/*.conf if exists.
 
     P2-A 阻断修复：三分支判断——不存在→生成，有Panel标记→跳过，无Panel标记→备份后接管。
+
+    路径引用修复：所有由程序生成的文件系统绝对路径统一通过 format_nginx_path 格式化，
+    转换为正斜杠并以双引号包裹，避免 WNMP 安装到含空格目录（如 D:/Program Files/WNMP）
+    时 nginx -t 因路径被空白拆分而报错。
     """
-    from runtime.wnmp_path import to_forward_slash
+    from runtime.wnmp_path import format_nginx_path
 
     # 路径收敛：通过统一路径模块获取输出路径
     output_path = get_nginx_conf_path(root_dir)
@@ -350,16 +354,24 @@ def generate_nginx_config(root_dir, cfg, logger=None):
         if not _backup_and_takeover(output_path, "nginx", root_dir, logger):
             return False, "原始配置备份失败，接管已中止: " + output_path
 
-    logs_dir = to_forward_slash(os.path.join(root_dir, "logs"))
-    runtime_dir = to_forward_slash(os.path.join(root_dir, "runtime"))
-    nginx_temp_dir = to_forward_slash(os.path.join(root_dir, "temp"))
-
-    # P2 收口：使用新路径变量，不再依赖 {{CONFIG_DIR}}/nginx
-    nginx_conf_dir = to_forward_slash(os.path.join(root_dir, "bin", "nginx", "conf"))
-    nginx_mime_types = to_forward_slash(get_nginx_mime_types_path(root_dir))
-    nginx_site_conf = to_forward_slash(get_nginx_site_conf_path(root_dir))
-    nginx_vhosts_dir = to_forward_slash(get_nginx_vhosts_dir(root_dir))
-    nginx_custom_http_dir = to_forward_slash(get_nginx_custom_http_dir(root_dir))
+    # 统一构建完整文件系统路径，并通过 format_nginx_path 加双引号包裹
+    # 包含的指令：error_log、pid、include mime.types、access_log、
+    # client_body_temp_path、proxy_temp_path、fastcgi_temp_path、
+    # uwsgi_temp_path、scgi_temp_path、include site.conf、
+    # include custom/http/*.conf、include vhosts/*.conf
+    nginx_error_log = format_nginx_path(os.path.join(root_dir, "logs", "nginx", "error.log"))
+    nginx_access_log = format_nginx_path(os.path.join(root_dir, "logs", "nginx", "access.log"))
+    nginx_pid_path = format_nginx_path(os.path.join(root_dir, "runtime", "nginx.pid"))
+    nginx_mime_types = format_nginx_path(get_nginx_mime_types_path(root_dir))
+    nginx_site_conf = format_nginx_path(get_nginx_site_conf_path(root_dir))
+    nginx_client_body_temp = format_nginx_path(os.path.join(root_dir, "temp", "client_body_temp"))
+    nginx_proxy_temp = format_nginx_path(os.path.join(root_dir, "temp", "proxy_temp"))
+    nginx_fastcgi_temp = format_nginx_path(os.path.join(root_dir, "temp", "fastcgi_temp"))
+    nginx_uwsgi_temp = format_nginx_path(os.path.join(root_dir, "temp", "uwsgi_temp"))
+    nginx_scgi_temp = format_nginx_path(os.path.join(root_dir, "temp", "scgi_temp"))
+    # include 通配符路径：目录后跟 /*.conf，整体由 format_nginx_path 包裹
+    nginx_vhosts_glob = format_nginx_path(os.path.join(get_nginx_vhosts_dir(root_dir), "*.conf"))
+    nginx_custom_http_glob = format_nginx_path(os.path.join(get_nginx_custom_http_dir(root_dir), "*.conf"))
 
     # P2：模板从 runtime/templates/nginx/ 读取
     template = read_template(root_dir, "nginx", "nginx.conf.template")
@@ -367,15 +379,19 @@ def generate_nginx_config(root_dir, cfg, logger=None):
         return False, "Nginx config template not found"
 
     variables = {
-        "LOGS_DIR": logs_dir,
-        "RUNTIME_DIR": runtime_dir,
-        "NGINX_TEMP_DIR": nginx_temp_dir,
-        # P2 收口：新路径变量
-        "NGINX_CONF_DIR": nginx_conf_dir,
+        # 路径值均已通过 format_nginx_path 加双引号包裹，模板直接替换即可
+        "NGINX_ERROR_LOG": nginx_error_log,
+        "NGINX_ACCESS_LOG": nginx_access_log,
+        "NGINX_PID_PATH": nginx_pid_path,
         "NGINX_MIME_TYPES": nginx_mime_types,
         "NGINX_SITE_CONF": nginx_site_conf,
-        "NGINX_VHOSTS_DIR": nginx_vhosts_dir,
-        "NGINX_CUSTOM_HTTP_DIR": nginx_custom_http_dir,
+        "NGINX_CLIENT_BODY_TEMP": nginx_client_body_temp,
+        "NGINX_PROXY_TEMP": nginx_proxy_temp,
+        "NGINX_FASTCGI_TEMP": nginx_fastcgi_temp,
+        "NGINX_UWSGI_TEMP": nginx_uwsgi_temp,
+        "NGINX_SCGI_TEMP": nginx_scgi_temp,
+        "NGINX_VHOSTS_GLOB": nginx_vhosts_glob,
+        "NGINX_CUSTOM_HTTP_GLOB": nginx_custom_http_glob,
     }
 
     content = replace_variables(template, variables)
@@ -446,15 +462,21 @@ def validate_site_config_https(content, enable_https, logger=None):
         cert_path = re.search(r'ssl_certificate\s+([^;]+);', content)
         key_path = re.search(r'ssl_certificate_key\s+([^;]+);', content)
 
+        # 路径值现已统一通过 format_nginx_path 加双引号包裹，验证时需要先剥掉首尾引号
+        def _strip_quotes(p):
+            if len(p) >= 2 and p.startswith('"') and p.endswith('"'):
+                return p[1:-1]
+            return p
+
         if cert_path:
-            path = cert_path.group(1).strip()
+            path = _strip_quotes(cert_path.group(1).strip())
             if path.startswith("{{") or path.startswith("./") or (len(path) > 1 and path[1] != ":"):
                 if logger:
                     log_error(logger, "Config validation failed: CERT_PATH is not absolute: " + path)
                 return False, ["CERT_PATH not absolute: " + path]
 
         if key_path:
-            path = key_path.group(1).strip()
+            path = _strip_quotes(key_path.group(1).strip())
             if path.startswith("{{") or path.startswith("./") or (len(path) > 1 and path[1] != ":"):
                 if logger:
                     log_error(logger, "Config validation failed: KEY_PATH is not absolute: " + path)
@@ -467,8 +489,12 @@ def generate_site_config(root_dir, cfg, logger=None):
     """Generate bin/nginx/conf/site.conf from template.
 
     P2-A 阻断修复：三分支判断——不存在→生成，有Panel标记→跳过，无Panel标记→备份后接管。
+
+    路径引用修复：所有由程序生成的文件系统绝对路径统一通过 format_nginx_path 格式化，
+    转换为正斜杠并以双引号包裹，兼容 WNMP 安装到含空格目录（如 D:/Program Files/WNMP）。
+    不对 Nginx 变量表达式（$document_root、$fastcgi_script_name 等）做路径处理。
     """
-    from runtime.wnmp_path import resolve_path, to_forward_slash
+    from runtime.wnmp_path import resolve_path, format_nginx_path
     from runtime import wnmp_config
     from runtime.wnmp_log import log_error
 
@@ -485,7 +511,8 @@ def generate_site_config(root_dir, cfg, logger=None):
             return False, "原始配置备份失败，接管已中止: " + output_path
 
     web_root_raw = wnmp_config.get(cfg, "WEB_ROOT")
-    web_root = to_forward_slash(resolve_path(root_dir, web_root_raw))
+    # resolve_path 返回的绝对路径可能含反斜杠，由 format_nginx_path 统一转正斜杠 + 加双引号
+    web_root = format_nginx_path(resolve_path(root_dir, web_root_raw))
     php_cgi_host = wnmp_config.get(cfg, "PHP_CGI_HOST")
     php_cgi_port = wnmp_config.get(cfg, "PHP_CGI_PORT")
     http_port = wnmp_config.get_int(cfg, "HTTP_PORT", 80)
@@ -497,16 +524,17 @@ def generate_site_config(root_dir, cfg, logger=None):
     if template is None:
         return False, "Site config template not found"
 
-    cert_path = to_forward_slash(os.path.join(root_dir, "config", "certs", "server.crt"))
-    key_path = to_forward_slash(os.path.join(root_dir, "config", "certs", "server.key"))
+    cert_path = format_nginx_path(os.path.join(root_dir, "config", "certs", "server.crt"))
+    key_path = format_nginx_path(os.path.join(root_dir, "config", "certs", "server.key"))
 
-    # P2 收口：使用新路径变量
-    nginx_fastcgi_params = to_forward_slash(get_nginx_fastcgi_params_path(root_dir))
-    nginx_custom_server_dir = to_forward_slash(get_nginx_custom_server_dir(root_dir))
+    # P2 收口：使用新路径变量，并统一通过 format_nginx_path 加双引号包裹
+    nginx_fastcgi_params = format_nginx_path(get_nginx_fastcgi_params_path(root_dir))
+    # include 通配符路径：目录后跟 /*.conf，整体由 format_nginx_path 包裹
+    nginx_custom_server_glob = format_nginx_path(os.path.join(get_nginx_custom_server_dir(root_dir), "*.conf"))
 
     variables = {
+        # 路径值均已通过 format_nginx_path 加双引号包裹，模板直接替换即可
         "WEB_ROOT": web_root,
-        "WEB_ROOT_POSIX": web_root,
         "PHP_CGI_HOST": php_cgi_host,
         "PHP_CGI_PORT": php_cgi_port,
         "HTTP_PORT": str(http_port),
@@ -516,7 +544,7 @@ def generate_site_config(root_dir, cfg, logger=None):
         "KEY_PATH": key_path,
         # P2 收口：新路径变量
         "NGINX_FASTCGI_PARAMS": nginx_fastcgi_params,
-        "NGINX_CUSTOM_SERVER_DIR": nginx_custom_server_dir,
+        "NGINX_CUSTOM_SERVER_GLOB": nginx_custom_server_glob,
     }
 
     content = replace_variables(template, variables)

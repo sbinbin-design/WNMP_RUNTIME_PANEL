@@ -1,9 +1,11 @@
 # Nginx 主配置模板
 # 首次初始化或 reset-config 时由模板生成；生成后的 config 文件由用户维护，启动/重启不会自动覆盖。
+# 所有文件系统路径占位符已由 generate_nginx_config 通过 format_nginx_path 统一加双引号包裹，
+# 兼容 WNMP 安装到含空格目录（如 D:/Program Files/WNMP）。
 
 worker_processes 1;
-error_log {{LOGS_DIR}}/nginx/error.log warn;
-pid {{RUNTIME_DIR}}/nginx.pid;
+error_log {{NGINX_ERROR_LOG}} warn;
+pid {{NGINX_PID_PATH}};
 
 events {
     worker_connections 1024;
@@ -17,23 +19,23 @@ http {
                       '$status $body_bytes_sent "$http_referer" '
                       '"$http_user_agent" "$http_x_forwarded_for"';
 
-    access_log  {{LOGS_DIR}}/nginx/access.log  main;
+    access_log  {{NGINX_ACCESS_LOG}}  main;
 
     sendfile        on;
     keepalive_timeout  65;
 
-    client_body_temp_path {{NGINX_TEMP_DIR}}/client_body_temp;
-    proxy_temp_path {{NGINX_TEMP_DIR}}/proxy_temp;
-    fastcgi_temp_path {{NGINX_TEMP_DIR}}/fastcgi_temp;
-    uwsgi_temp_path {{NGINX_TEMP_DIR}}/uwsgi_temp;
-    scgi_temp_path {{NGINX_TEMP_DIR}}/scgi_temp;
+    client_body_temp_path {{NGINX_CLIENT_BODY_TEMP}};
+    proxy_temp_path       {{NGINX_PROXY_TEMP}};
+    fastcgi_temp_path     {{NGINX_FASTCGI_TEMP}};
+    uwsgi_temp_path       {{NGINX_UWSGI_TEMP}};
+    scgi_temp_path        {{NGINX_SCGI_TEMP}};
 
     # 引入站点配置
     include {{NGINX_SITE_CONF}};
 
     # 引入用户自定义配置（http 级别）
-    include {{NGINX_CUSTOM_HTTP_DIR}}/*.conf;
+    include {{NGINX_CUSTOM_HTTP_GLOB}};
 
     # 引入虚拟主机配置（完整 server 块）
-    include {{NGINX_VHOSTS_DIR}}/*.conf;
+    include {{NGINX_VHOSTS_GLOB}};
 }

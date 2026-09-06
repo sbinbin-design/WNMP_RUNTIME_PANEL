@@ -196,13 +196,16 @@ def _save_config_file_impl(root_dir, name, content, component):
             _log_warning(root_dir, "标记 config_dirty 失败: {}".format(str(e)))
 
     # 步骤 5：同步更新 runtime-config.php
+    # 修复点：原直接调用 generate_runtime_config，绕过默认站点归属判断，
+    # 会导致用户删除/替换默认 index.php 或删除整个 www 后，保存配置仍重建
+    # runtime-config.php（甚至重建 www）。改为复用 update_runtime_config_for_start，
+    # 与 cmd_start/cmd_restart 使用同一套判断规则：仅在默认 index.php 仍由 WNMP
+    # 管理时才更新 runtime-config.php。
     try:
         from runtime.wnmp_config import load_config
-        from runtime.wnmp_default_site import generate_runtime_config
-        from runtime.wnmp_path import resolve_path
+        from runtime.wnmp_default_site import update_runtime_config_for_start
         cfg = load_config(root_dir)
-        web_root = resolve_path(root_dir, cfg.get("WEB_ROOT", "./www"))
-        generate_runtime_config(web_root, cfg, root_dir)
+        update_runtime_config_for_start(root_dir, cfg, None)
     except Exception as e:
         _log_warning(root_dir, "同步 runtime-config.php 失败: {}".format(str(e)))
 

@@ -1046,12 +1046,13 @@ def cmd_start(root_dir, cfg, logger):
         # Nginx 配置待应用，不算完整成功，不回滚 PHP/MySQL，不打开浏览器
         log_error(logger, "环境未完全启动：Nginx 配置已修改但尚未应用，请先重载或重启 Nginx；PHP/MySQL 状态不受影响")
         print("环境未完全启动：Nginx 配置已修改但尚未应用，请先重载或重启 Nginx；PHP/MySQL 状态不受影响")
-        # 同步 runtime-config.php（即使未完全成功也更新运行信息）
+        # 同步 runtime-config.php：仅当默认 index.php 仍由 WNMP 管理时才更新
+        # 修复点：原无条件调用 generate_runtime_config，导致用户删除/替换默认 index.php
+        # 后 start 仍会重建 runtime-config.php。改为复用 update_runtime_config_for_start
+        # 统一走"仅在默认页仍归 WNMP 管理时才维护 runtime-config.php"的判断
         try:
-            from runtime.wnmp_default_site import generate_runtime_config
-            from runtime.wnmp_path import resolve_path
-            web_root = resolve_path(root_dir, wnmp_config.get(cfg, "WEB_ROOT", "./www"))
-            generate_runtime_config(web_root, cfg, root_dir)
+            from runtime.wnmp_default_site import update_runtime_config_for_start
+            update_runtime_config_for_start(root_dir, cfg, logger)
         except Exception:
             pass
         return 1
@@ -1063,12 +1064,11 @@ def cmd_start(root_dir, cfg, logger):
 
     log_success(logger, "WNMP Runtime started successfully")
 
-    # 启动成功后同步 runtime-config.php（仅更新默认检测页的运行信息，不覆盖用户组件配置）
+    # 启动成功后同步 runtime-config.php：仅当默认 index.php 仍由 WNMP 管理时才更新
+    # 修复点：与上面 need_action 分支保持同一套启动维护入口，避免逻辑分叉
     try:
-        from runtime.wnmp_default_site import generate_runtime_config
-        from runtime.wnmp_path import resolve_path
-        web_root = resolve_path(root_dir, wnmp_config.get(cfg, "WEB_ROOT", "./www"))
-        generate_runtime_config(web_root, cfg, root_dir)
+        from runtime.wnmp_default_site import update_runtime_config_for_start
+        update_runtime_config_for_start(root_dir, cfg, logger)
     except Exception:
         pass  # 同步失败不影响启动结果
 

@@ -4,9 +4,9 @@
  * 注意：使用数值常量以兼容 llvm-rc
  *
  * 版本相关字段使用占位符，由 scripts/sync_version.py 从项目根目录 VERSION 文件读取后替换：
- *   0,2,0,0   -> FILEVERSION 数字四段，如 0,1,0,0
- *   0,2,0,0 -> PRODUCTVERSION 数字四段，如 0,1,0,0
- *   0.2.0-dev       -> 完整版本字符串，如 0.1.0-dev
+ *   0,2,1,0   -> FILEVERSION 数字四段，如 0,1,0,0
+ *   0,2,1,0 -> PRODUCTVERSION 数字四段，如 0,1,0,0
+ *   0.2.1-dev       -> 完整版本字符串，如 0.1.0-dev
  *
  * 不要直接编辑 WNMPPanel.rc，修改本模板或 VERSION 后运行 sync_version.py 即可。
  */
@@ -19,8 +19,8 @@
 
 /* 版本信息 */
 1 VERSIONINFO
-FILEVERSION     0,2,0,0
-PRODUCTVERSION  0,2,0,0
+FILEVERSION     0,2,1,0
+PRODUCTVERSION  0,2,1,0
 FILEFLAGSMASK   0x3F
 FILEFLAGS       0
 FILEOS          0x40004
@@ -33,12 +33,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "HTTPS://DACAT.CC"
             VALUE "FileDescription",  "WNMP Runtime Panel Launcher"
-            VALUE "FileVersion",      "0.2.0-dev"
+            VALUE "FileVersion",      "0.2.1-dev"
             VALUE "InternalName",     "WNMPPanel"
             VALUE "LegalCopyright",   "DACAT.CC"
             VALUE "OriginalFilename", "WNMPPanel.exe"
             VALUE "ProductName",      "WNMP Runtime"
-            VALUE "ProductVersion",   "0.2.0-dev"
+            VALUE "ProductVersion",   "0.2.1-dev"
         END
     END
     BLOCK "VarFileInfo"
