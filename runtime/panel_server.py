@@ -3,7 +3,7 @@
 WNMP Panel Server - Minimal Python Panel using standard library.
 
 Usage (normal user):
-    Double-click WNMPPanel.exe  (recommended, auto-starts this server)
+    Double-click WNMPanel.exe  (recommended, auto-starts this server)
 
 Usage (development / debugging only):
     bin/python/python.exe runtime/panel_server.py
@@ -879,7 +879,7 @@ class PanelHandler(BaseHTTPRequestHandler):
                             tail_lines = lf.readlines()[-20:]
                         tail_text = "".join(tail_lines)
                         if "Administrator" in tail_text or "Access is denied" in tail_text:
-                            message = "启用/关闭开机自启动需要管理员权限，请以管理员权限运行 WNMPPanel.exe"
+                            message = "启用/关闭开机自启动需要管理员权限，请以管理员权限运行 WNMPanel.exe"
                 except Exception:
                     pass
 

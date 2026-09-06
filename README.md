@@ -10,7 +10,7 @@ WNMP Runtime Panel 用于在本机管理 WNMP（Windows + Nginx + PHP-CGI + MySQ
 
 ## 功能特性
 
-- **本地 Web 控制面板**：双击 `WNMPPanel.exe` 自动启动 Panel Server 并打开浏览器，无需手动配置
+- **本地 Web 控制面板**：双击 `WNMPanel.exe` 自动启动 Panel Server 并打开浏览器，无需手动配置
 - **独立组件管理**：Nginx、PHP-CGI、MySQL 分别支持启停与实时状态检测
 - **一键初始化**：首次使用时点击"初始化环境"，自动生成默认配置、默认站点、本地开发证书和 MySQL 数据目录
 - **组件配置归位**：Panel 配置保留在 `config\runtime.ini`，Nginx/PHP/MySQL 配置位于各自组件目录，支持面板内编辑
@@ -49,7 +49,7 @@ WNMP Runtime Panel 用于在本机管理 WNMP（Windows + Nginx + PHP-CGI + MySQ
 
 ### 3. 启动面板
 
-双击项目根目录下的 `WNMPPanel.exe`，Panel Server 将自动启动并打开浏览器访问控制面板。启动器会：
+双击项目根目录下的 `WNMPanel.exe`，Panel Server 将自动启动并打开浏览器访问控制面板。启动器会：
 
 - 以自身所在目录作为项目根目录
 - 读取 `config\runtime.ini` 中的 `PANEL_HOST` 和 `PANEL_PORT`
@@ -77,12 +77,12 @@ Panel 配置保留在 `config\runtime.ini`，Nginx/PHP/MySQL 配置位于各自�
 
 ```
 WNMP_RUNTIME/
-├── WNMPPanel.exe              # C 启动器，双击启动控制面板（唯一用户入口）
+├── WNMPanel.exe              # C 启动器，双击启动控制面板（唯一用户入口）
 ├── VERSION                    # 版本号唯一来源
 ├── build_launcher.bat         # 开发者编译脚本
 ├── launcher/                  # 启动器源码
-│   ├── WNMPPanel.c            # C 启动器源码
-│   ├── WNMPPanel.manifest     # UAC manifest
+│   ├── WNMPanel.c            # C 启动器源码
+│   ├── WNMPanel.manifest     # UAC manifest
 │   └── wnmp-panel.ico         # 应用图标
 ├── runtime/                   # Python 运行控制模块
 │   ├── panel_server.py        # Panel HTTP 服务器
@@ -216,7 +216,7 @@ WNMP_RUNTIME/
 Panel 版本号由项目根目录 `VERSION` 文件统一维护，所有版本展示均从此文件读取：
 
 - Panel 页面版本（左下角、关于页面）通过 `/api/panel-version` 从 `runtime\version.py` 读取 `VERSION` 文件
-- `WNMPPanel.exe` 文件属性版本由 `scripts\sync_version.py` 从 `VERSION` 生成
+- `WNMPanel.exe` 文件属性版本由 `scripts\sync_version.py` 从 `VERSION` 生成
 
 > Panel 版本号仅代表控制面板自身版本，**不是** Nginx / PHP / MySQL / Python 的组件版本。
 
@@ -238,13 +238,13 @@ bin\python\python.exe runtime\wnmpctl.py status
 
 ### 编译启动器
 
-`WNMPPanel.exe` 使用 C 语言编写，启动器源码位于 `launcher\` 目录。开发者可使用 MinGW-w64 或 LLVM 编译：
+`WNMPanel.exe` 使用 C 语言编写，启动器源码位于 `launcher\` 目录。开发者可使用 MinGW-w64 或 LLVM 编译：
 
 ```bash
 build_launcher.bat
 ```
 
-该脚本会自动调用 `scripts\sync_version.py` 同步版本号，然后编译并输出 `WNMPPanel.exe` 到项目根目录。
+该脚本会自动调用 `scripts\sync_version.py` 同步版本号，然后编译并输出 `WNMPanel.exe` 到项目根目录。
 
 ### 清理运行产物
 

@@ -3,8 +3,8 @@
 sync_version.py - 版本号同步脚本
 
 从项目根目录 VERSION 文件读取版本号，自动生成：
-  - launcher/WNMPPanel.rc（资源文件）
-  - launcher/WNMPPanel.manifest（UAC manifest）
+  - launcher/WNMPanel.rc（资源文件）
+  - launcher/WNMPanel.manifest（UAC manifest）
 
 用法：
     python scripts/sync_version.py
@@ -13,8 +13,8 @@ sync_version.py - 版本号同步脚本
     1. 读取项目根目录 VERSION 文件（如 0.1.0-dev）
     2. 解析前三段数字用于 Windows FILEVERSION/PRODUCTVERSION（如 0,1,0,0）
     3. 保留完整 VERSION 字符串用于 FileVersion/ProductVersion 字符串
-    4. 从 launcher/WNMPPanel.rc.template 读取模板，替换占位符后写入 launcher/WNMPPanel.rc
-    5. 从 launcher/WNMPPanel.manifest.template 读取模板，替换占位符后写入 launcher/WNMPPanel.manifest
+    4. 从 launcher/WNMPanel.rc.template 读取模板，替换占位符后写入 launcher/WNMPanel.rc
+    5. 从 launcher/WNMPanel.manifest.template 读取模板，替换占位符后写入 launcher/WNMPanel.manifest
 
 VERSION 格式支持：
     - 0.1.0
@@ -71,7 +71,7 @@ def version_dot(major, minor, patch):
 
 
 def generate_rc(template_path, output_path, version_str, file_version_comma):
-    """从模板生成 WNMPPanel.rc，替换版本相关占位符。"""
+    """从模板生成 WNMPanel.rc，替换版本相关占位符。"""
     if not os.path.isfile(template_path):
         print("[ERROR] 模板文件不存在: {}".format(template_path), file=sys.stderr)
         sys.exit(1)
@@ -91,7 +91,7 @@ def generate_rc(template_path, output_path, version_str, file_version_comma):
 
 
 def generate_manifest(template_path, output_path, manifest_version):
-    """从模板生成 WNMPPanel.manifest，替换版本占位符。"""
+    """从模板生成 WNMPanel.manifest，替换版本占位符。"""
     if not os.path.isfile(template_path):
         print("[ERROR] 模板文件不存在: {}".format(template_path), file=sys.stderr)
         sys.exit(1)
@@ -113,10 +113,10 @@ def main():
     project_root = os.path.normpath(os.path.join(script_dir, ".."))
 
     version_file = os.path.join(project_root, "VERSION")
-    rc_template_path = os.path.join(project_root, "launcher", "WNMPPanel.rc.template")
-    rc_output_path = os.path.join(project_root, "launcher", "WNMPPanel.rc")
-    manifest_template_path = os.path.join(project_root, "launcher", "WNMPPanel.manifest.template")
-    manifest_output_path = os.path.join(project_root, "launcher", "WNMPPanel.manifest")
+    rc_template_path = os.path.join(project_root, "launcher", "WNMPanel.rc.template")
+    rc_output_path = os.path.join(project_root, "launcher", "WNMPanel.rc")
+    manifest_template_path = os.path.join(project_root, "launcher", "WNMPanel.manifest.template")
+    manifest_output_path = os.path.join(project_root, "launcher", "WNMPanel.manifest")
 
     # 1. 读取 VERSION
     version_str = read_version(version_file)
@@ -130,10 +130,10 @@ def main():
     print("[INFO] ManifestVersion = {}".format(mv_dot))
     print("[INFO] VersionString = {}".format(version_str))
 
-    # 3. 生成 WNMPPanel.rc
+    # 3. 生成 WNMPanel.rc
     generate_rc(rc_template_path, rc_output_path, version_str, fv_comma)
 
-    # 4. 生成 WNMPPanel.manifest
+    # 4. 生成 WNMPanel.manifest
     generate_manifest(manifest_template_path, manifest_output_path, mv_dot)
 
     print("[OK] 版本同步完成。")

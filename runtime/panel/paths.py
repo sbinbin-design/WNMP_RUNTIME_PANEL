@@ -31,7 +31,7 @@ def get_root_dir():
     - logs/, data/
     - runtime/
     - launcher/
-    - WNMPPanel.exe
+    - WNMPanel.exe
     """
     if getattr(sys, 'frozen', False):
         return str(_get_frozen_root())

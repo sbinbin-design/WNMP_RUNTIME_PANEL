@@ -1,5 +1,14 @@
 # Release Notes
 
+## v0.2.5-dev
+
+- 修复 PHP-CGI 长时间运行达到请求生命周期后正常退出，导致 PHP 服务永久停止的问题。
+- 接入 PHP-CGI 原生 Master/Worker 运行模型，支持 Worker 自动轮换。
+- 正式启用 PHP_FCGI_CHILDREN 和 PHP_FCGI_MAX_REQUESTS 配置。
+- 统一 PHP Master PID、Worker/Listener PID 的生命周期与状态管理。
+- 优化 PHP 启动、停止、重启及异常 PID 场景下的进程树处理。
+- 提升 PHP-CGI 长时间运行稳定性。
+
 ## v0.2.1-dev
 
 - 修复 Nginx 在含空格安装路径下生成配置失败的问题。
@@ -66,5 +75,5 @@
 ### 版本号统一管理
 
 - 版本号统一由根目录 VERSION 文件管理，运行时优先读取 VERSION 文件，version.py 仅提供兜底值
-- WNMPPanel.exe 内嵌 manifest 版本号由 sync_version.py 从 VERSION 自动生成，确保一致性
+- WNMPanel.exe 内嵌 manifest 版本号由 sync_version.py 从 VERSION 自动生成，确保一致性
 - 不在前端文件中写死版本号

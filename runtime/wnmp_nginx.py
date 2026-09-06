@@ -473,7 +473,7 @@ def stop_nginx(root_dir, cfg, logger):
                         break
                 break
     if target_pid_for_perm_check and is_system_process(target_pid_for_perm_check) and not current_admin:
-        msg = "该组件由 SYSTEM/高权限启动，停止需要以管理员权限运行 WNMPPanel.exe"
+        msg = "该组件由 SYSTEM/高权限启动，停止需要以管理员权限运行 WNMPanel.exe"
         log_info(logger, "Permission denied: target_pid={} owner=SYSTEM, current_admin=False. {}".format(
             target_pid_for_perm_check, msg))
         return False, msg

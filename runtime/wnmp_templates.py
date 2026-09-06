@@ -744,16 +744,19 @@ def generate_php_cgi_config(root_dir, cfg, logger=None):
     php_cgi_host = wnmp_config.get(cfg, "PHP_CGI_HOST", "127.0.0.1")
     php_cgi_port = wnmp_config.get(cfg, "PHP_CGI_PORT", "9000")
     php_cgi_children = wnmp_config.get(cfg, "PHP_CGI_CHILDREN", "5")
+    php_cgi_max_requests = wnmp_config.get(cfg, "PHP_CGI_MAX_REQUESTS", "500")
 
     content = "; PHP-CGI 运行配置（与 php.ini 分离）\n"
     content += "; php.ini 控制 PHP 运行时行为，php-cgi.ini 控制 PHP-CGI 进程启动参数\n"
     content += "; 修改后需重启 PHP-CGI 组件生效\n"
     content += "; 此文件由首次初始化从 runtime.ini 默认值生成，后续由用户维护\n"
+    content += "; children 对应 PHP_FCGI_CHILDREN（Worker 数），max_requests 对应 PHP_FCGI_MAX_REQUESTS\n"
     content += "\n"
     content += "[php-cgi]\n"
     content += "host={}\n".format(php_cgi_host)
     content += "port={}\n".format(php_cgi_port)
     content += "children={}\n".format(php_cgi_children)
+    content += "max_requests={}\n".format(php_cgi_max_requests)
     content += "\n"
 
     # P2：添加 Panel 管理标记（php-cgi 使用 ; 注释符）

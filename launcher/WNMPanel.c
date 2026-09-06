@@ -1,5 +1,5 @@
 /*
- * WNMPPanel.exe - WNMP Runtime Panel Launcher
+ * WNMPanel.exe - WNMP Runtime Panel Launcher
  *
  * 职责：读取配置、启动内置 Python、拉起 runtime.panel_server、
  *       等待 Panel 就绪并打开浏览器。
@@ -518,7 +518,7 @@ static int http_probe_ex(const WCHAR *host, int port, const WCHAR *path,
     int result = 0;
 
     /* 使用 NO_PROXY 避免本地探测被系统代理干扰 */
-    hSession = WinHttpOpen(L"WNMPPanel",
+    hSession = WinHttpOpen(L"WNMPanel",
                            WINHTTP_ACCESS_TYPE_NO_PROXY,
                            WINHTTP_NO_PROXY_NAME,
                            WINHTTP_NO_PROXY_BYPASS, 0);
@@ -727,7 +727,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     /* 3. 初始化日志 */
     log_init();
 
-    log_write(L"========== WNMPPanel.exe 启动 ==========");
+    log_write(L"========== WNMPanel.exe 启动 ==========");
     log_write(L"rootDir: %s", g_rootDir);
     log_write(L"runtime.ini: %s", g_iniPath);
 
@@ -1174,7 +1174,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     }
 
     log_write(L"CreateProcessW 成功: PID=%lu, TID=%lu", pi.dwProcessId, pi.dwThreadId);
-    log_write(L"权限诊断: python.exe PID=%lu (由 WNMPPanel.exe 启动，应继承权限)", pi.dwProcessId);
+    log_write(L"权限诊断: python.exe PID=%lu (由 WNMPanel.exe 启动，应继承权限)", pi.dwProcessId);
 
     /* 16. 关闭不需要的句柄 */
     /* 注意：hPanelLog 和 hNul 已被子进程继承，但父进程不再需要它们。
@@ -1244,7 +1244,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         log_write(L"AUTO_OPEN_BROWSER=0，不打开浏览器");
     }
 
-    log_write(L"========== WNMPPanel.exe 启动完成 ==========");
+    log_write(L"========== WNMPanel.exe 启动完成 ==========");
 
     /* 19. 清理 */
     CloseHandle(pi.hProcess);

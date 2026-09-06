@@ -1,5 +1,5 @@
 /*
- * WNMPPanel.rc.template - 资源文件模板（由 sync_version.py 生成 WNMPPanel.rc）
+ * WNMPanel.rc.template - 资源文件模板（由 sync_version.py 生成 WNMPanel.rc）
  * 引用 UAC manifest 并设置版本信息
  * 注意：使用数值常量以兼容 llvm-rc
  *
@@ -8,11 +8,11 @@
  *   {{PRODUCT_VERSION_COMMA}} -> PRODUCTVERSION 数字四段，如 0,1,0,0
  *   {{VERSION_STRING}}       -> 完整版本字符串，如 0.1.0-dev
  *
- * 不要直接编辑 WNMPPanel.rc，修改本模板或 VERSION 后运行 sync_version.py 即可。
+ * 不要直接编辑 WNMPanel.rc，修改本模板或 VERSION 后运行 sync_version.py 即可。
  */
 
 /* 嵌入 UAC manifest */
-1 24 "WNMPPanel.manifest"
+1 24 "WNMPanel.manifest"
 
 /* 应用图标 */
 1 ICON "wnmp-panel.ico"
@@ -34,9 +34,9 @@ BEGIN
             VALUE "CompanyName",      "HTTPS://DACAT.CC"
             VALUE "FileDescription",  "WNMP Runtime Panel Launcher"
             VALUE "FileVersion",      "{{VERSION_STRING}}"
-            VALUE "InternalName",     "WNMPPanel"
+            VALUE "InternalName",     "WNMPanel"
             VALUE "LegalCopyright",   "DACAT.CC"
-            VALUE "OriginalFilename", "WNMPPanel.exe"
+            VALUE "OriginalFilename", "WNMPanel.exe"
             VALUE "ProductName",      "WNMP Runtime"
             VALUE "ProductVersion",   "{{VERSION_STRING}}"
         END

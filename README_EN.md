@@ -12,7 +12,7 @@ All operations are performed through a local Web control panel. It does not rely
 
 ## Features
 
-- **Local Web Control Panel**: Double-click `WNMPPanel.exe` to automatically start the Panel Server and open the browser. No manual configuration is required.
+- **Local Web Control Panel**: Double-click `WNMPanel.exe` to automatically start the Panel Server and open the browser. No manual configuration is required.
 - **Independent Component Management**: Nginx, PHP-CGI, and MySQL can be started, stopped, restarted, and monitored independently.
 - **One-Click Initialization**: On first use, click "Initialize Environment" to automatically generate default configuration files, the default site, local development certificates, and the MySQL data directory.
 - **Component Configuration Co-location**: Panel config remains in `config\runtime.ini`, while Nginx/PHP/MySQL configs are located in their respective component directories, editable in the panel.
@@ -53,7 +53,7 @@ Required binary files:
 
 ### 3. Start the Panel
 
-Double-click `WNMPPanel.exe` in the project root directory. The Panel Server will start automatically and open the browser.
+Double-click `WNMPanel.exe` in the project root directory. The Panel Server will start automatically and open the browser.
 
 The launcher will:
 
@@ -85,12 +85,12 @@ After modifying configuration files, you usually need to restart or reload the c
 
 ```text
 WNMP_RUNTIME/
-├── WNMPPanel.exe              # C launcher, the only user-facing entry point
+├── WNMPanel.exe              # C launcher, the only user-facing entry point
 ├── VERSION                    # Single source of truth for the panel version
 ├── build_launcher.bat         # Developer build script
 ├── launcher/                  # Launcher source code
-│   ├── WNMPPanel.c            # C launcher source
-│   ├── WNMPPanel.manifest     # UAC manifest
+│   ├── WNMPanel.c            # C launcher source
+│   ├── WNMPanel.manifest     # UAC manifest
 │   └── wnmp-panel.ico         # Application icon
 ├── runtime/                   # Python runtime control modules
 │   ├── panel_server.py        # Panel HTTP server
@@ -227,7 +227,7 @@ After enabling startup on boot, it is not recommended to modify `SERVICE_NAME` c
 The Panel version is maintained by the root `VERSION` file. All version displays are read from this file.
 
 - The panel page version, including the footer and About page, is read through `/api/panel-version` from `runtime\version.py`
-- The `WNMPPanel.exe` file property version is generated from `VERSION` by `scripts\sync_version.py`
+- The `WNMPanel.exe` file property version is generated from `VERSION` by `scripts\sync_version.py`
 
 > The Panel version only represents the control panel itself. It is **not** the version of Nginx, PHP, MySQL, or Python.
 
@@ -249,13 +249,13 @@ bin\python\python.exe runtime\wnmpctl.py status
 
 ### Build the Launcher
 
-`WNMPPanel.exe` is written in C. The launcher source code is located in the `launcher\` directory. Developers can compile it with MinGW-w64 or LLVM.
+`WNMPanel.exe` is written in C. The launcher source code is located in the `launcher\` directory. Developers can compile it with MinGW-w64 or LLVM.
 
 ```bash
 build_launcher.bat
 ```
 
-This script automatically calls `scripts\sync_version.py` to synchronize the version number, then compiles and outputs `WNMPPanel.exe` to the project root.
+This script automatically calls `scripts\sync_version.py` to synchronize the version number, then compiles and outputs `WNMPanel.exe` to the project root.
 
 ### Clean Runtime Artifacts
 

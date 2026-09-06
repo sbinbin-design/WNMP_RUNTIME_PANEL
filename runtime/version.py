@@ -7,7 +7,7 @@ WNMP Panel Version - 集中维护 Panel 自身版本号。
 2. 本模块默认值（兜底）
 
 此版本号代表 WNMP Panel 控制面板自身的版本，包括：
-- WNMPPanel.exe 启动器
+- WNMPanel.exe 启动器
 - runtime/panel_server.py Panel Server
 - 前端 UI (app.js / style.css / index.html)
 - 运行器管理逻辑 (wnmpctl / wnmp_state / wnmp_config 等)
@@ -18,7 +18,7 @@ import os
 
 # ---- 默认兜底值 ----
 PANEL_NAME = "WNMP Runtime Panel"
-PANEL_VERSION = "0.2.1-dev"
+PANEL_VERSION = "0.2.5-dev"
 BUILD_DATE = ""  # 构建时可由脚本注入，留空表示开发构建
 
 

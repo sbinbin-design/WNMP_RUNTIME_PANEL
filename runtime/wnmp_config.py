@@ -27,6 +27,7 @@ DEFAULTS = {
     "PHP_CGI_HOST": "127.0.0.1",
     "PHP_CGI_PORT": "9000",
     "PHP_CGI_CHILDREN": "5",
+    "PHP_CGI_MAX_REQUESTS": "500",
     "MYSQL_HOST": "127.0.0.1",
     "MYSQL_PORT": "3306",
     "WEB_ROOT": "./www",
@@ -291,8 +292,13 @@ def parse_mysql_port(root_dir):
 def parse_php_cgi_config(root_dir):
     """从 bin/php/php-cgi.ini 解析 PHP-CGI 运行参数。
 
-    返回 dict: {"host": str, "port": int, "children": int}
+    返回 dict: {"host": str, "port": int, "children": int, "max_requests": int}
     解析失败返回 None。
+
+    兼容性约束：
+    - children 缺失或非法时回退默认 5，且约束 children >= 1。
+    - max_requests 缺失或非法时回退默认 500（老 php-cgi.ini 无此字段不影响启动）。
+    - max_requests=0 表示 PHP 原生语义"不按请求数回收"，允许存在但默认绝不设为 0。
     """
     # 路径收敛：通过统一路径模块获取 php-cgi.ini 路径
     php_cgi_ini = get_php_cgi_ini_path(root_dir)
@@ -300,6 +306,8 @@ def parse_php_cgi_config(root_dir):
         return None
     try:
         result = {}
+        raw_children = None
+        raw_max_requests = None
         with open(php_cgi_ini, "r", encoding="utf-8", errors="replace") as f:
             for line in f:
                 stripped = line.strip()
@@ -314,9 +322,34 @@ def parse_php_cgi_config(root_dir):
                     elif key == "port":
                         result["port"] = int(value)
                     elif key == "children":
-                        result["children"] = int(value)
-        if "host" in result and "port" in result:
-            return result
+                        raw_children = value
+                    elif key == "max_requests":
+                        raw_max_requests = value
+
+        if "host" not in result or "port" not in result:
+            return None
+
+        # children：缺失/非法回退 5，且约束 >= 1
+        children = 5
+        try:
+            children = int(raw_children) if raw_children is not None else 5
+        except (ValueError, TypeError):
+            children = 5
+        if children < 1:
+            children = 5
+        result["children"] = children
+
+        # max_requests：缺失/非法回退 500，允许非负整数（0 表示不按请求数回收）
+        max_requests = 500
+        try:
+            max_requests = int(raw_max_requests) if raw_max_requests is not None else 500
+        except (ValueError, TypeError):
+            max_requests = 500
+        if max_requests < 0:
+            max_requests = 500
+        result["max_requests"] = max_requests
+
+        return result
     except Exception:
         pass
     return None

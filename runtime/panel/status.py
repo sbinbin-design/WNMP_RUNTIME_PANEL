@@ -774,11 +774,11 @@ def _get_php_status_fast(cfg):
     if ownership["status"] == "running":
         listener_pid = ownership["pid"]
         listener_path = ownership.get("path")
-        # 回写 PID 缓存
-        if listener_pid and listener_pid != pid:
-            _write_pid_cache("php", listener_pid)
+        # 注意：php-cgi.pid 永远表示 Master PID，不得把 listener/Worker PID 回写覆盖。
+        # 启用 Master+Worker 模型后，listener PID 可能随 Worker 轮换变化，
+        # 只要 9000 持续由本项目 php-cgi.exe 监听即视为 running。
         return dict(base, running=True, state="running",
-                    pid=listener_pid or pid,
+                    pid=pid,  # 显示 Master PID（来自 PID 文件），无 PID 文件时为 None
                     message="正常运行",
                     listener_pid=listener_pid, listener_path=listener_path,
                     decision="confirmed_by_listener_path")
@@ -789,20 +789,17 @@ def _get_php_status_fast(cfg):
                     listener_pid=None, listener_path=ownership.get("path"),
                     decision="external")
     elif ownership["status"] == "unknown":
-        # 修复：path=None 时，尝试通过 recorded_pid + 进程名组合确认归属
+        # path=None 时，通过 Master+Worker 祖先关系确认归属。
+        # 旧单进程模型要求 listener_pid == recorded_pid，Master+Worker 模型下
+        # listener_pid 是 Worker，recorded_pid 是 Master，二者不相等，不能用 PID 相等判断。
         unknown_listener_pid = ownership.get("pid")
-        confirmation = confirm_running_by_recorded_pid(
-            "php", unknown_listener_pid, [pid] if pid else [],
-            ["php-cgi.exe"])
+        confirmation = confirm_php_running_by_master_worker(unknown_listener_pid, pid)
         if confirmation:
-            # 端口监听 + listener_pid == recorded_pid + 进程名匹配 → 确认 running
-            confirmed_pid = confirmation["confirmed_pid"]
-            # 回写 PID 缓存
-            if confirmed_pid != pid:
-                _write_pid_cache("php", confirmed_pid)
+            # 端口监听 + listener Worker 属于 recorded Master 进程树 → 确认 running
+            # 注意：php-cgi.pid 永远表示 Master PID，不因状态查询回写 Worker/listener PID
             return dict(base, running=True, state="running",
-                        pid=confirmed_pid,
-                        message="正常运行（通过记录 PID 确认）",
+                        pid=pid,  # 显示 Master PID（来自 PID 文件）
+                        message="正常运行（通过 Master 进程树确认）",
                         listener_pid=unknown_listener_pid,
                         listener_path=ownership.get("path"),
                         decision=confirmation["decision"])
@@ -1087,13 +1084,69 @@ def confirm_running_by_recorded_pid(component, listener_pid, recorded_pid_candid
     return result
 
 
+def confirm_php_running_by_master_worker(listener_pid, master_pid):
+    """PHP Master+Worker 模型下，通过祖先关系确认 listener Worker 属于 recorded Master。
+
+    适用场景：listener path=None（SYSTEM/开机计划任务启动导致 path 不可读），
+    无法通过 executable path 精确匹配 php-cgi.exe 时。
+
+    确认条件（必须全部满足）：
+      1. listener_pid 有值
+      2. master_pid 有值且仍存活（php-cgi.pid 记录的 Master）
+      3. listener_pid 是 php-cgi.exe（进程名匹配，仅作辅助）
+      4. listener_pid 的父进程/祖先进程链能回溯到 master_pid（属于同一进程树）
+
+    不依赖 listener_pid == master_pid（旧单进程模型的判断），
+    也不回写 php-cgi.pid（Worker/listener PID 永不覆盖 Master PID）。
+
+    Args:
+        listener_pid: 端口监听进程 PID（来自 netstat，可能是某个 Worker）
+        master_pid: php-cgi.pid 记录的 Master PID
+
+    Returns:
+        dict or None: 确认成功返回 {"decision": "confirmed_by_master_worker"}，失败返回 None
+    """
+    from runtime.wnmp_process import is_process_running, get_process_name_fast, is_process_in_ancestry
+
+    # 条件 1 + 2：listener_pid / master_pid 必须有值
+    if not listener_pid or not master_pid:
+        return None
+
+    # 条件 2 补充：Master 必须仍存活
+    master_alive = is_process_running(master_pid)
+    if master_alive is False:
+        return None  # Master 已退出，PID 文件残留
+    # master_alive is None（权限不足）时保守视为存活，继续检查
+
+    # 条件 3：listener 进程名必须是 php-cgi.exe（辅助判断，不单独作为归属依据）
+    proc_name = get_process_name_fast(listener_pid, timeout=1)
+    if not proc_name:
+        return None  # 无法获取进程名，不能确认
+    if proc_name.lower() != "php-cgi.exe":
+        return None  # 进程名不匹配
+
+    # 条件 4：listener Worker 必须属于 recorded Master 的进程树（祖先关系）
+    if not is_process_in_ancestry(listener_pid, master_pid, max_depth=16, timeout=2):
+        return None
+
+    # 降噪日志：仅状态变化时输出
+    log_key = "php_master_worker"
+    last_log = _last_confirmation_log.get(log_key)
+    current_log = "decision=confirmed_by_master_worker listener_pid={} master_pid={} proc_name={}".format(
+        listener_pid, master_pid, proc_name)
+    if last_log != current_log:
+        _status_log("component=php {} path_readable=false source=master_worker_ancestry".format(current_log))
+        _last_confirmation_log[log_key] = current_log
+
+    return {"decision": "confirmed_by_master_worker"}
+
+
 # 组件状态探测函数映射，供 get_component_status 使用
 _COMPONENT_PROBE_MAP = {
     "nginx": _get_nginx_status_fast,
     "php": _get_php_status_fast,
     "mysql": _get_mysql_status_fast,
 }
-
 
 def get_component_status(component, cfg=None):
     """获取单个组件的状态，互相隔离。

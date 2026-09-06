@@ -2,7 +2,7 @@
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
   <assemblyIdentity
     type="win32"
-    name="WNMP.WNMPPanel"
+    name="WNMP.WNMPanel"
     version="{{MANIFEST_VERSION}}"
     processorArchitecture="*"/>
   <description>WNMP Runtime Panel Launcher</description>

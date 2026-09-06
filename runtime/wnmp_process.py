@@ -506,6 +506,171 @@ def get_process_path(pid, timeout=3):
     return result["path"]
 
 
+def get_parent_pid(pid, timeout=3):
+    """获取指定 PID 进程的父进程 PID（ParentProcessId）。
+
+    查询优先级：
+      1. WinAPI: OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) + NtQueryInformationProcess
+         （最快，不依赖外部命令，SYSTEM 进程在权限受限时可能返回 access_denied）
+      2. PowerShell: Get-CimInstance Win32_Process（兜底，含超时保护，SYSTEM 可读）
+
+    不依赖 wmic。用于 Master+Worker 模型下确认 listener Worker 是否属于
+    某个 Master 的进程树（祖先关系判断）。
+
+    Args:
+        pid: 进程 ID
+        timeout: PowerShell 兜底超时秒数
+
+    Returns:
+        int or None: 父进程 PID；进程不存在 / 权限不足 / 查询失败返回 None
+    """
+    if not pid:
+        return None
+
+    # 优先 WinAPI（仅 Windows）
+    if os.name == "nt":
+        ppid = _get_parent_pid_via_winapi(pid)
+        if ppid is not None:
+            return ppid
+        # WinAPI 失败（access_denied / api_error），尝试 PowerShell 兜底
+        ppid = _get_parent_pid_via_powershell(pid, timeout)
+        if ppid is not None:
+            return ppid
+        return None
+
+    # 非 Windows：PowerShell 兜底
+    return _get_parent_pid_via_powershell(pid, timeout)
+
+
+def _get_parent_pid_via_winapi(pid):
+    """通过 WinAPI NtQueryInformationProcess 获取父进程 PID。
+
+    使用 OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION) + NtQueryInformationProcess
+    读取 PROCESS_BASIC_INFORMATION.InheritedFromUniqueProcessId。
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        kernel32 = ctypes.windll.kernel32
+        ntdll = ctypes.windll.ntdll
+
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        ERROR_INVALID_PARAMETER = 87
+        ERROR_ACCESS_DENIED = 5
+
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
+            err = ctypes.GetLastError()
+            if err in (ERROR_INVALID_PARAMETER,):
+                return None  # 进程不存在
+            # access_denied 或其它错误：返回 None，交由 PowerShell 兜底
+            return None
+
+        try:
+            # PROCESS_BASIC_INFORMATION 结构
+            # typedef struct {
+            #   PVOID Reserved1;
+            #   PPEB PebBaseAddress;
+            #   PVOID Reserved2[2];
+            #   ULONG_PTR UniqueProcessId;
+            #   PVOID Reserved3;
+            # } PROCESS_BASIC_INFORMATION;
+            # InheritedFromUniqueProcessId 实际位于 Reserved3 偏移处（x64 下偏移 0x20）
+            class PROCESS_BASIC_INFORMATION(ctypes.Structure):
+                _fields_ = [
+                    ("Reserved1", ctypes.c_void_p),
+                    ("PebBaseAddress", ctypes.c_void_p),
+                    ("Reserved2_0", ctypes.c_void_p),
+                    ("Reserved2_1", ctypes.c_void_p),
+                    ("UniqueProcessId", ctypes.c_void_p),
+                    ("InheritedFromUniqueProcessId", ctypes.c_void_p),
+                ]
+
+            pbi = PROCESS_BASIC_INFORMATION()
+            # NtQueryInformationProcess(ProcessHandle, ProcessInformationClass,
+            #                            ProcessInformation, ProcessInformationLength, ReturnLength)
+            # ProcessBasicInformation = 0
+            status = ntdll.NtQueryInformationProcess(
+                handle, 0, ctypes.byref(pbi), ctypes.sizeof(pbi), None
+            )
+            if status == 0 and pbi.InheritedFromUniqueProcessId:
+                return int(pbi.InheritedFromUniqueProcessId)
+            return None
+        finally:
+            kernel32.CloseHandle(handle)
+    except Exception:
+        return None
+
+
+def _get_parent_pid_via_powershell(pid, timeout=3):
+    """通过 PowerShell CIM 获取父进程 PID（兜底，SYSTEM 可读）。"""
+    try:
+        ps_cmd = (
+            "Get-CimInstance Win32_Process -Filter \"ProcessId={}\" | "
+            "Select-Object ProcessId,ParentProcessId | ConvertTo-Csv -NoTypeInformation"
+        ).format(pid)
+        cmd = [
+            "powershell", "-NoProfile", "-NonInteractive",
+            "-ExecutionPolicy", "Bypass",
+            "-Command", ps_cmd
+        ]
+        result = subprocess.run(
+            cmd, capture_output=True, text=True,
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            timeout=timeout
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            reader = csv.DictReader(io.StringIO(result.stdout.strip()))
+            for row in reader:
+                pid_str = (row.get("ProcessId") or "").strip()
+                ppid_str = (row.get("ParentProcessId") or "").strip()
+                if not pid_str or not ppid_str:
+                    continue
+                try:
+                    if int(pid_str) == pid:
+                        return int(ppid_str)
+                except ValueError:
+                    continue
+        return None
+    except subprocess.TimeoutExpired:
+        return None
+    except Exception:
+        return None
+
+
+def is_process_in_ancestry(child_pid, ancestor_pid, max_depth=16, timeout=3):
+    """判断 child_pid 是否是 ancestor_pid 的后代进程（沿父链回溯）。
+
+    用于 Master+Worker 模型：确认 listener Worker 是否属于 recorded Master 的进程树。
+
+    Args:
+        child_pid: 子进程 PID（如 listener Worker）
+        ancestor_pid: 祖先进程 PID（如 Master）
+        max_depth: 最大回溯层数，防止异常环
+        timeout: 每次父进程查询的超时秒数
+
+    Returns:
+        bool: child 是否为 ancestor 的后代；查询失败返回 False
+    """
+    if not child_pid or not ancestor_pid:
+        return False
+    if child_pid == ancestor_pid:
+        return True
+    seen = set()
+    cur = child_pid
+    for _ in range(max_depth):
+        if cur is None:
+            return False
+        if cur == ancestor_pid:
+            return True
+        if cur in seen:
+            return False  # 环保护
+        seen.add(cur)
+        cur = get_parent_pid(cur, timeout=timeout)
+    return False
+
+
 def get_process_owner(pid, timeout=3):
     """获取指定 PID 进程的所属用户（不依赖 wmic）。
 
@@ -899,11 +1064,13 @@ def cleanup_residual_processes(root_dir, image_name, logger=None):
     return stopped, failed
 
 
-def start_process(cmd_list, cwd=None, logger=None, stdout_file=None, stderr_file=None):
+def start_process(cmd_list, cwd=None, logger=None, stdout_file=None, stderr_file=None, env=None):
     """启动进程，返回 subprocess.Popen 对象或 None。
 
     stdout_file/stderr_file: 若提供则重定向到文件，否则 DEVNULL。
     父进程侧关闭日志文件句柄，避免句柄堆积。
+    env: 可选的环境变量 dict。默认 None（继承当前进程环境，行为与旧版本一致）。
+         传入时直接传给 subprocess.Popen(..., env=env)，不影响其它调用方。
     """
     try:
         creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -927,6 +1094,7 @@ def start_process(cmd_list, cwd=None, logger=None, stdout_file=None, stderr_file
                 cwd=cwd,
                 stdout=stdout_f,
                 stderr=stderr_f,
+                env=env,
                 creationflags=creation_flags
             )
             return proc

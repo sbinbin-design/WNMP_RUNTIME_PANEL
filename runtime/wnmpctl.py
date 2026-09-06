@@ -492,7 +492,7 @@ def _do_first_time_init(root_dir, cfg, logger):
                 print("   System PATH: failed to add - " + str(err))
         else:
             mark_env_path_configured(root_dir, configured=False, reason="no_admin_privilege")
-            print("   System PATH: skipped (requires admin, run WNMPPanel.exe as admin or use bin\\python\\python.exe runtime\\wnmpctl.py install-env)")
+            print("   System PATH: skipped (requires admin, run WNMPanel.exe as admin or use bin\\python\\python.exe runtime\\wnmpctl.py install-env)")
             log_warn(logger, "System PATH not modified: requires admin privileges")
     else:
         print("   System PATH: disabled by ADD_TO_SYSTEM_PATH=0")
@@ -1639,6 +1639,8 @@ def cmd_restart_php(root_dir, cfg, logger):
     ok, result = stop_php_cgi(root_dir, cfg, logger)
     if not ok:
         log_error(logger, "PHP-CGI stop failed: " + str(result))
+        print("ERROR: PHP-CGI restart aborted, stop failed: " + str(result))
+        return 1
 
     # P2 启动前配置布局保障小收口：restart 时 start 前也需要保障
     ok, msg = _ensure_config_layout_before_component_start(root_dir, cfg, logger)
@@ -1767,7 +1769,7 @@ def cmd_install_env(root_dir, cfg, logger):
     if not is_admin():
         print("ERROR: Administrator privileges required.")
         print()
-        print("Please run WNMPPanel.exe as administrator, or use:")
+        print("Please run WNMPanel.exe as administrator, or use:")
         print("  bin\\python\\python.exe runtime\\wnmpctl.py install-path")
         print()
         return 1
@@ -1815,7 +1817,7 @@ def cmd_uninstall_env(root_dir, cfg, logger):
     if not is_admin():
         print("ERROR: Administrator privileges required.")
         print()
-        print("Please run WNMPPanel.exe as administrator, or use:")
+        print("Please run WNMPanel.exe as administrator, or use:")
         print("  bin\\python\\python.exe runtime\\wnmpctl.py install-path")
         print()
         return 1

@@ -850,7 +850,7 @@ def stop_mysql(root_dir, cfg, logger):
 
     # SYSTEM 进程提前返回
     if listener_is_expected is True and listener_pid and listener_owner == "SYSTEM" and not current_admin:
-        msg = "该组件由 SYSTEM/高权限启动，停止需要以管理员权限运行 WNMPPanel.exe"
+        msg = "该组件由 SYSTEM/高权限启动，停止需要以管理员权限运行 WNMPanel.exe"
         log_info(logger, "Permission denied: " + msg)
         return False, msg
 
@@ -966,7 +966,7 @@ def stop_mysql(root_dir, cfg, logger):
                     ln_addr, ln_pid or "?", ln_path))
         msg = "port {} still occupied: ".format(mysql_port) + "; ".join(details)
         if system_hint:
-            msg += " | 该组件由 SYSTEM/高权限启动，停止需要以管理员权限运行 WNMPPanel.exe"
+            msg += " | 该组件由 SYSTEM/高权限启动，停止需要以管理员权限运行 WNMPanel.exe"
         log_error(logger, "Failed to stop MySQL: " + msg)
         return False, msg
 
